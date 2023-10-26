@@ -1,0 +1,154 @@
+﻿@page "/"
+@using SQLNaturalBlzSrv.Data
+@inject AiQueryService AiQueryService
+
+<PageTitle>SQL Natural</PageTitle>
+
+<h1>SQL Natural</h1>
+
+<div>
+    <div class="w-50">
+        <select @bind="database" @bind:after="DatabaseChanged" class="form-select">
+            <option value="Chinook">Chinook</option>
+            <option value="Northwind Traders">Northwind Traders</option>
+        </select>
+    </div>
+
+    <div class="input-group input-group-default mt-2">
+        <div class="input-group-prepend">
+            <span class="input-group-text" id="inputGroup-sizing-default">Enter query in natural language</span>
+        </div>
+        <input @bind="naturalQuery" @bind:event="oninput" disabled="@isFetching" onkeydown="@HandleKeyDown" type="text"
+            class="form-control" aria-label="Large" aria-describedby="inputGroup-sizing-default">
+    </div>
+
+    @* <input @bind="naturalQuery" disabled="@isFetching" onkeydown="@HandleKeyDown" /> *@
+    <button @onclick="Submit" disabled="@(isFetching || naturalQuery.Length < 3)" class="btn btn-primary btn-lg mt-2">
+        Query
+    </button>
+</div>
+
+@if (isFetching)
+{
+    <div class="spinner-border text-primary mt-2" role="status">
+        @* <span class="sr-only">Loading...</span> *@
+    </div>
+}
+else
+{
+
+    @if (superDataSet != null)
+    {
+        <div>
+            @if (superDataSet.UsageResponse != null)
+            {
+                <table class="table-sm table-bordered mt-2">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Total</th>
+                            <th>Prompt</th>
+                            <th>Completion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Tokens</td>
+                            <td>@superDataSet.UsageResponse.TotalTokens</td>
+                            <td>@superDataSet.UsageResponse.PromptTokens</td>
+                            <td>@superDataSet.UsageResponse.CompletionTokens</td>
+                        </tr>
+                    </tbody>
+                </table>
+            }
+
+            @if (!string.IsNullOrEmpty(superDataSet.ErrorText))
+            {
+                <p class="text-danger mt-2">@superDataSet.ErrorText</p>
+            }
+
+            @if (!string.IsNullOrEmpty(superDataSet.SqlQueryText))
+            {
+                <p id="sqlQueryText" class="mt-2">@superDataSet.SqlQueryText</p>
+            }
+
+            @* TODO responsive https://getbootstrap.com/docs/5.3/content/tables/#responsive-tables *@
+
+            @if (superDataSet.DataTable != null)
+            {
+                <table class="table table-bordered mt-2">
+                    @* <colgroup>
+        @foreach (var column in superDataSet.DataTable.Columns)
+        {
+        <col />
+        }
+        </colgroup> *@
+                    <thead>
+                        <tr>
+                            @foreach (var columnName in superDataSet.DataTable.Columns)
+                            {
+                                <th>@columnName</th>
+                            }
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (System.Data.DataRow row in superDataSet!.DataTable!.Rows)
+                        {
+                            <tr>
+                                @foreach (var cell in row.ItemArray)
+                                {
+                                    <td>@cell!.ToString()</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+}
+
+@code {
+    private string naturalQuery = "employees";
+    private SuperDataSet superDataSet = new SuperDataSet();
+    private bool isFetching = false;
+    private string database = "Chinook";
+
+    private void SetDatabase(string value)
+    {
+        database = value;
+    }
+
+    protected override void OnInitialized()
+    {
+        naturalQuery = "employees: name and surname";
+    }
+
+    private async Task Submit()
+    {
+        //superDataSet = new();
+        // Assume you have a method to get the SuperDataSet based on inputData
+        isFetching = true;
+        superDataSet = await AiQueryService.GetSuperDataSet(naturalQuery);
+        isFetching = false;
+        //forecasts = await ForecastService.GetForecastAsync(DateOnly.FromDateTime(DateTime.Now));
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            Console.WriteLine(naturalQuery);
+            await Submit();
+        }
+    }
+
+    private void DatabaseChanged()
+    {
+        @* database = e.Value.ToString(); *@
+        naturalQuery = "";
+        superDataSet = new SuperDataSet();
+        Console.WriteLine("Change");
+    }
+}

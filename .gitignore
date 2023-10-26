@@ -1,0 +1,13 @@
+openai-api-key.txt
+sqlite3.exe
+create.sql
+update.sql
+*.db
+bin/
+obj/
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
